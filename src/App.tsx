@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { BUILT_IN_PRESETS } from "./data/presets";
+import { Language, TRANSLATIONS } from "./i18n/translations";
 import {
   applyEqProfile,
   checkEqualizerApo,
@@ -17,6 +18,7 @@ import {
   openExternalUrl,
   pickApoDirectory,
   saveCustomProfiles,
+  setTrayLanguage,
 } from "./services/tauriApi";
 import { ApoStatus, AudioDevice, BandGain, EqProfile } from "./types/eq";
 import { ApoBanner } from "./components/ApoBanner";
@@ -26,10 +28,17 @@ import { EqSliders } from "./components/EqSliders";
 
 const SAVED_DEVICE_KEY = "soundpulse_selected_device";
 const SAVED_APO_PATH_KEY = "soundpulse_apo_path";
+const SAVED_LANG_KEY = "soundpulse_lang";
 const EQUALIZER_APO_URL = "https://sourceforge.net/projects/equalizerapo/";
 
 export function App() {
   const defaultPreset = BUILT_IN_PRESETS[0];
+
+  const [lang, setLang] = useState<Language>(() => {
+    const saved = localStorage.getItem(SAVED_LANG_KEY);
+    return saved === "tr" ? "tr" : "en";
+  });
+  const t = TRANSLATIONS[lang];
 
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>(
@@ -65,6 +74,12 @@ export function App() {
     [customProfiles]
   );
 
+  useEffect(() => {
+    localStorage.setItem(SAVED_LANG_KEY, lang);
+    document.documentElement.lang = lang;
+    setTrayLanguage(lang).catch(() => {});
+  }, [lang]);
+
   const refreshDevices = useCallback(async () => {
     setLoadingDevices(true);
     try {
@@ -79,12 +94,12 @@ export function App() {
       });
     } catch (err) {
       setSyncError(
-        err instanceof Error ? err.message : "Ses aygıtları alınamadı."
+        err instanceof Error ? err.message : TRANSLATIONS[lang].devicesFetchError
       );
     } finally {
       setLoadingDevices(false);
     }
-  }, []);
+  }, [lang]);
 
   const refreshApoStatus = useCallback(async (path: string | null) => {
     try {
@@ -109,10 +124,11 @@ export function App() {
       setPreamp(evt.preamp);
       setBands(evt.bands);
       setBypassed(evt.bypassed);
+      const dict = TRANSLATIONS[
+        (localStorage.getItem(SAVED_LANG_KEY) as Language) === "tr" ? "tr" : "en"
+      ];
       setSyncMessage(
-        evt.bypassed
-          ? "Sistem tepsisinden Bypass (Kulaklık Modu) etkinleştirildi"
-          : "Sistem tepsisinden profil güncellendi"
+        evt.bypassed ? dict.trayBypassSynced : dict.trayProfileSynced
       );
     }).then((fn) => {
       unlisten = fn;
@@ -122,14 +138,12 @@ export function App() {
     };
   }, []);
 
-  // Persist selected device
   useEffect(() => {
     if (selectedDevice) {
       localStorage.setItem(SAVED_DEVICE_KEY, selectedDevice);
     }
   }, [selectedDevice]);
 
-  // Debounced atomic write to Equalizer APO config.txt
   useEffect(() => {
     if (!selectedDevice) return;
     if (skipNextAutoApplyRef.current) {
@@ -153,9 +167,7 @@ export function App() {
         });
         setSyncError(null);
         setSyncMessage(
-          bypassed
-            ? "Bypass aktif — kulaklıkta EQ devre dışı"
-            : `${selectedDevice} için uygulandı`
+          bypassed ? t.bypassAppliedStatus : t.appliedForDevice(selectedDevice)
         );
       } catch (err) {
         setSyncError(typeof err === "string" ? err : String(err));
@@ -167,7 +179,7 @@ export function App() {
         window.clearTimeout(applyTimerRef.current);
       }
     };
-  }, [selectedDevice, activeProfileId, preamp, bands, bypassed, customApoPath]);
+  }, [selectedDevice, activeProfileId, preamp, bands, bypassed, customApoPath, t]);
 
   const handleSelectPreset = (preset: EqProfile) => {
     setActiveProfileId(preset.id);
@@ -210,7 +222,7 @@ export function App() {
     const newProfile: EqProfile = {
       id: `custom-${Date.now()}`,
       name: trimmed,
-      description: newProfileDesc.trim() || "Kullanıcı özel EQ profili",
+      description: newProfileDesc.trim() || t.modalDefaultDesc,
       preamp,
       bands: bands.map((b) => ({ ...b })),
       isCustom: true,
@@ -227,7 +239,7 @@ export function App() {
     try {
       await saveCustomProfiles(updated);
     } catch (err) {
-      setSyncError(typeof err === "string" ? err : "Özel profil kaydedilemedi.");
+      setSyncError(typeof err === "string" ? err : t.saveProfileError);
     }
   };
 
@@ -240,7 +252,7 @@ export function App() {
     try {
       await saveCustomProfiles(updated);
     } catch (err) {
-      setSyncError(typeof err === "string" ? err : "Profil silinemedi.");
+      setSyncError(typeof err === "string" ? err : t.deleteProfileError);
     }
   };
 
@@ -250,8 +262,8 @@ export function App() {
       <div className="pointer-events-none fixed inset-x-0 top-0 h-56 bg-gradient-to-b from-violet-600/12 via-purple-700/5 to-transparent" />
 
       <div className="relative z-10 max-w-5xl w-full mx-auto px-5 py-5 flex flex-col gap-4 flex-1">
-        {/* Top Bar: Brand + Target Speaker + Big Bypass Toggle */}
-        <header className="rounded-2xl bg-[#12121A]/90 backdrop-blur-xl border border-white/[0.06] px-4 py-3.5 flex flex-wrap items-center justify-between gap-4">
+        {/* Top Bar: Brand + Target Speaker + EN/TR Toggle + Big Bypass Toggle */}
+        <header className="rounded-2xl bg-[#12121A]/90 backdrop-blur-xl border border-white/[0.06] px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.45)]">
               <Volume2 className="w-5 h-5 text-white" />
@@ -261,23 +273,23 @@ export function App() {
                 SoundPulse EQ
               </h1>
               <p className="text-[11px] text-zinc-400 mt-1">
-                Equalizer APO Motoru • Anlık Profil Kontrolü
+                {t.appSubtitle}
               </p>
             </div>
           </div>
 
           {/* Target Speaker Selector */}
-          <div className="flex items-center gap-2 flex-1 min-w-[240px] max-w-md">
+          <div className="flex items-center gap-2 flex-1 min-w-[210px] max-w-sm">
             <div className="relative flex-1">
               <Speaker className="w-4 h-4 text-violet-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <select
-                aria-label="Hedef Hoparlör Seçimi"
+                aria-label={t.targetSpeakerAria}
                 value={selectedDevice}
                 onChange={(e) => setSelectedDevice(e.target.value)}
                 className="w-full appearance-none rounded-xl bg-[#181823] hover:bg-[#1E1E2C] border border-white/[0.08] focus:border-violet-500/60 focus:outline-none pl-9 pr-8 py-2 text-xs font-medium text-zinc-100 transition cursor-pointer truncate"
               >
                 {devices.length === 0 && (
-                  <option value="">Ses aygıtı bulunamadı</option>
+                  <option value="">{t.noDevicesFound}</option>
                 )}
                 {devices.map((dev) => (
                   <option key={dev.id} value={dev.name}>
@@ -290,7 +302,7 @@ export function App() {
               type="button"
               onClick={refreshDevices}
               disabled={loadingDevices}
-              title="Ses aygıtlarını yenile"
+              title={t.refreshDevicesTitle}
               className="p-2 rounded-xl bg-[#181823] hover:bg-[#1E1E2C] border border-white/[0.08] text-zinc-300 transition cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
@@ -299,51 +311,78 @@ export function App() {
             </button>
           </div>
 
-          {/* Large EQ Active / Bypass (Headphone Mode) Toggle */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={!bypassed}
-            onClick={() => setBypassed((b) => !b)}
-            className={`flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all cursor-pointer select-none ${
-              bypassed
-                ? "bg-zinc-900/90 border-white/10 text-zinc-300"
-                : "bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_24px_rgba(139,92,246,0.22)]"
-            }`}
-          >
-            <div className="flex flex-col text-left">
-              <span className="text-xs font-semibold leading-tight">
-                {bypassed ? "Bypass (Kulaklık Modu)" : "EQ Aktif"}
-              </span>
-              <span className="text-[10px] text-zinc-400">
-                {bypassed ? "Tüm EQ devre dışı" : "Seçili hoparlörde etkin"}
-              </span>
+          <div className="flex items-center gap-2.5">
+            {/* EN / TR Language Pill Toggle */}
+            <div
+              role="group"
+              aria-label="Language"
+              className="inline-flex items-center p-0.5 rounded-xl bg-[#181823] border border-white/[0.08]"
+            >
+              {(["en", "tr"] as const).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setLang(code)}
+                  className={`px-2.5 py-1 rounded-[10px] text-[11px] font-semibold uppercase tracking-wide transition cursor-pointer ${
+                    lang === code
+                      ? "bg-violet-600 text-white shadow-[0_0_12px_rgba(139,92,246,0.45)]"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  {code}
+                </button>
+              ))}
             </div>
 
-            <div
-              className={`relative w-12 h-7 rounded-full transition-colors ${
-                bypassed ? "bg-zinc-700" : "bg-gradient-to-r from-violet-500 to-purple-500"
+            {/* Large EQ Active / Bypass (Headphone Mode) Toggle */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!bypassed}
+              onClick={() => setBypassed((b) => !b)}
+              className={`flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all cursor-pointer select-none ${
+                bypassed
+                  ? "bg-zinc-900/90 border-white/10 text-zinc-300"
+                  : "bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_24px_rgba(139,92,246,0.22)]"
               }`}
             >
-              <span
-                className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md flex items-center justify-center transition-transform duration-200 ${
-                  bypassed ? "translate-x-0" : "translate-x-5"
+              <div className="flex flex-col text-left">
+                <span className="text-xs font-semibold leading-tight">
+                  {bypassed ? t.bypassTitle : t.eqActive}
+                </span>
+                <span className="text-[10px] text-zinc-400">
+                  {bypassed ? t.bypassDesc : t.eqActiveDesc}
+                </span>
+              </div>
+
+              <div
+                className={`relative w-12 h-7 rounded-full transition-colors ${
+                  bypassed
+                    ? "bg-zinc-700"
+                    : "bg-gradient-to-r from-violet-500 to-purple-500"
                 }`}
               >
-                {bypassed ? (
-                  <Headphones className="w-3 h-3 text-zinc-700" />
-                ) : (
-                  <Speaker className="w-3 h-3 text-violet-600" />
-                )}
-              </span>
-            </div>
-          </button>
+                <span
+                  className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md flex items-center justify-center transition-transform duration-200 ${
+                    bypassed ? "translate-x-0" : "translate-x-5"
+                  }`}
+                >
+                  {bypassed ? (
+                    <Headphones className="w-3 h-3 text-zinc-700" />
+                  ) : (
+                    <Speaker className="w-3 h-3 text-violet-600" />
+                  )}
+                </span>
+              </div>
+            </button>
+          </div>
         </header>
 
         {/* Equalizer APO Installation / Permission Banner */}
         {apoStatus && (
           <ApoBanner
             status={apoStatus}
+            t={t}
             onPickFolder={handlePickApoFolder}
             onDownload={() => openExternalUrl(EQUALIZER_APO_URL)}
           />
@@ -354,18 +393,25 @@ export function App() {
           presets={allPresets}
           activeProfileId={activeProfileId}
           bypassed={bypassed}
+          t={t}
           onSelectPreset={handleSelectPreset}
           onDeleteCustomPreset={handleDeleteCustomPreset}
         />
 
         {/* Live Frequency Response Curve */}
-        <FrequencyCurve bands={bands} preamp={preamp} bypassed={bypassed} />
+        <FrequencyCurve
+          bands={bands}
+          preamp={preamp}
+          bypassed={bypassed}
+          t={t}
+        />
 
         {/* 8-Band Vertical EQ Sliders & Preamp */}
         <EqSliders
           bands={bands}
           preamp={preamp}
           bypassed={bypassed}
+          t={t}
           onBandChange={handleBandChange}
           onPreampChange={handlePreampChange}
           onResetFlat={handleResetFlat}
@@ -380,11 +426,11 @@ export function App() {
             ) : (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5 text-violet-400" />
-                <span>{syncMessage || "Hazır"}</span>
+                <span>{syncMessage || t.readyStatus}</span>
               </>
             )}
           </div>
-          <span>Kapatıldığında sistem tepsisine küçülür</span>
+          <span>{t.trayHint}</span>
         </footer>
       </div>
 
@@ -397,7 +443,7 @@ export function App() {
           >
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-white">
-                Özel Ses Profili Kaydet
+                {t.modalTitle}
               </h3>
               <button
                 type="button"
@@ -411,13 +457,13 @@ export function App() {
             <div className="flex flex-col gap-3">
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">
-                  Profil Adı
+                  {t.modalNameLabel}
                 </label>
                 <input
                   type="text"
                   required
                   autoFocus
-                  placeholder="Örn: Gece Sineması"
+                  placeholder={t.modalNamePlaceholder}
                   value={newProfileName}
                   onChange={(e) => setNewProfileName(e.target.value)}
                   className="w-full rounded-xl bg-[#0E0E16] border border-white/10 focus:border-violet-500 focus:outline-none px-3 py-2 text-sm text-white"
@@ -425,11 +471,11 @@ export function App() {
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">
-                  Açıklama (İsteğe Bağlı)
+                  {t.modalDescLabel}
                 </label>
                 <input
                   type="text"
-                  placeholder="Örn: Yumuşak tizler, sıcak bas"
+                  placeholder={t.modalDescPlaceholder}
                   value={newProfileDesc}
                   onChange={(e) => setNewProfileDesc(e.target.value)}
                   className="w-full rounded-xl bg-[#0E0E16] border border-white/10 focus:border-violet-500 focus:outline-none px-3 py-2 text-sm text-white"
@@ -443,13 +489,13 @@ export function App() {
                 onClick={() => setIsSaveModalOpen(false)}
                 className="px-3.5 py-2 rounded-xl text-xs font-medium bg-white/5 hover:bg-white/10 text-zinc-300 transition cursor-pointer"
               >
-                İptal
+                {t.cancelBtn}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-600/25 transition cursor-pointer"
               >
-                Kaydet
+                {t.saveBtn}
               </button>
             </div>
           </form>

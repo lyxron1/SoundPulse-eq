@@ -112,6 +112,13 @@ export async function openExternalUrl(url: string): Promise<void> {
   await invoke("open_external_url", { url });
 }
 
+export async function setTrayLanguage(lang: "en" | "tr"): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke("set_tray_language", { lang });
+}
+
 export async function listenTrayUpdates(
   handler: (event: TraySyncEvent) => void
 ): Promise<UnlistenFn> {

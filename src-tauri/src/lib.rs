@@ -45,6 +45,32 @@ pub struct TraySyncEvent {
 pub struct TrayHandles {
     pub preset_items: Vec<(String, CheckMenuItem<tauri::Wry>)>,
     pub bypass_item: CheckMenuItem<tauri::Wry>,
+    pub show_item: MenuItem<tauri::Wry>,
+    pub quit_item: MenuItem<tauri::Wry>,
+}
+
+fn tray_preset_label<'a>(id: &str, lang: &str, fallback: &'a str) -> &'a str {
+    if lang == "tr" {
+        match id {
+            "soundpulse-signature" => "SoundPulse Özel (Signature)",
+            "bass-booster" => "Bas Güçlendirici",
+            "gaming-fps" => "Oyun / FPS (Ayak Sesi)",
+            "podcast-vocal" => "Podcast / Net Konuşma",
+            "acoustic" => "Akustik / Enstrüman",
+            "flat" => "Düz (Flat)",
+            _ => fallback,
+        }
+    } else {
+        match id {
+            "soundpulse-signature" => "SoundPulse Signature",
+            "bass-booster" => "Bass Booster",
+            "gaming-fps" => "Gaming / FPS (Footsteps)",
+            "podcast-vocal" => "Podcast / Clear Voice",
+            "acoustic" => "Acoustic / Instrument",
+            "flat" => "Flat",
+            _ => fallback,
+        }
+    }
 }
 
 pub struct AppState {
@@ -234,6 +260,29 @@ fn pick_apo_directory() -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+fn set_tray_language(state: State<'_, AppState>, lang: String) -> Result<(), String> {
+    let lang_norm = if lang == "tr" { "tr" } else { "en" };
+    if let Ok(guard) = state.tray.lock() {
+        if let Some(handles) = guard.as_ref() {
+            for (id, item) in &handles.preset_items {
+                let label = tray_preset_label(id, lang_norm, id);
+                let _ = item.set_text(label);
+            }
+            if lang_norm == "tr" {
+                let _ = handles.bypass_item.set_text("Bypass (Devre Dışı)");
+                let _ = handles.show_item.set_text("Pencereyi Göster");
+                let _ = handles.quit_item.set_text("Çıkış");
+            } else {
+                let _ = handles.bypass_item.set_text("Bypass (Disabled)");
+                let _ = handles.show_item.set_text("Show Window");
+                let _ = handles.quit_item.set_text("Quit");
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn open_external_url(url: String) -> Result<(), String> {
     if !url.starts_with("https://") && !url.starts_with("http://") {
         return Err("Yalnızca http/https bağlantıları açılabilir".to_string());
@@ -312,10 +361,11 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     for (idx, preset) in presets.iter().enumerate() {
         let item_id = format!("preset:{}", preset.id);
+        let label = tray_preset_label(&preset.id, "en", &preset.name);
         let item = CheckMenuItem::with_id(
             app,
             item_id,
-            &preset.name,
+            label,
             true,
             idx == 0,
             None::<&str>,
@@ -326,13 +376,13 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let bypass_item = CheckMenuItem::with_id(
         app,
         "bypass",
-        "Bypass (Devre Dışı)",
+        "Bypass (Disabled)",
         true,
         false,
         None::<&str>,
     )?;
-    let show_item = MenuItem::with_id(app, "show", "Pencereyi Göster", true, None::<&str>)?;
-    let quit_item = MenuItem::with_id(app, "quit", "Çıkış", true, None::<&str>)?;
+    let show_item = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
@@ -353,6 +403,8 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             *guard = Some(TrayHandles {
                 preset_items,
                 bypass_item,
+                show_item,
+                quit_item,
             });
         };
     }
@@ -415,6 +467,7 @@ pub fn run() {
             load_custom_profiles,
             save_custom_profiles,
             pick_apo_directory,
+            set_tray_language,
             open_external_url
         ])
         .run(tauri::generate_context!())

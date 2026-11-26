@@ -19,6 +19,7 @@ An ultra-lightweight desktop audio equalizer (EQ) and sound profile controller f
 - **Canlı Frekans Tepki Eğrisi (Live Frequency Curve):** 8 bant (`60 Hz` – `16 kHz`) için gerçek zamanlı SVG frekans eğrisi ve `-12 dB` / `+12 dB` dikey fader kontrolleri + Preamp ayarı.
 - **Özel Profil Kaydetme (Custom Profiles):** Kendi EQ ayarlarınızı kaydedin ve tek tıkla geçiş yapın (`custom_profiles.json`).
 - **Sistem Tepsisi Desteği (System Tray):** Pencere kapatıldığında uygulama kapanmaz, sistem tepsisine küçülür. Sağ tık menüsünden hazır profiller arasında tek tıkla geçiş yapabilir veya **Bypass (Devre Dışı)** modunu açabilirsiniz.
+- **Çift Dil Desteği (`EN / TR`):** Varsayılan İngilizce arayüz ile Türkçe arasında üst çubuktan tek tıkla geçiş yapabilirsiniz (sistem tepsisi menüsü dahil).
 - **Atomik Yapılandırma Yazımı:** `config.txt` dosyası geçici dosya üzerinden atomik olarak güncellenir.
 
 ---
@@ -43,6 +44,6 @@ An ultra-lightweight desktop audio equalizer (EQ) and sound profile controller f
 
 ## Yasal Uyarı / Disclaimer
 
-Bu proje Anker veya Soundcore ile ilişkili değildir; Equalizer APO için geliştirilmiş bağımsız, açık kaynaklı bir arayüz uygulamasıdır.
+Bu proje herhangi bir ses donanımı üreticisiyle ilişkili değildir; Equalizer APO için geliştirilmiş bağımsız, açık kaynaklı bir arayüz uygulamasıdır.
 
-*This project is not affiliated with, endorsed by, or connected to Anker or Soundcore; it is an independent, open-source frontend application developed for Equalizer APO.*
+*This project is not affiliated with any audio hardware manufacturer; it is an independent, open-source frontend application developed for Equalizer APO.*

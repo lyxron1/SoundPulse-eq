@@ -1,11 +1,13 @@
 import React, { useMemo } from "react";
 import { BandGain } from "../types/eq";
 import { formatFreqLabel } from "../data/presets";
+import { Translations } from "../i18n/translations";
 
 interface FrequencyCurveProps {
   bands: BandGain[];
   preamp: number;
   bypassed: boolean;
+  t: Translations;
 }
 
 const SVG_WIDTH = 760;
@@ -47,6 +49,7 @@ export const FrequencyCurve: React.FC<FrequencyCurveProps> = ({
   bands,
   preamp,
   bypassed,
+  t,
 }) => {
   const { points, linePath, areaPath } = useMemo(() => {
     const pts = bands.map((band, index) => {
@@ -72,11 +75,11 @@ export const FrequencyCurve: React.FC<FrequencyCurveProps> = ({
     <div className="relative w-full rounded-2xl bg-[#12121A]/90 border border-white/[0.06] p-3 overflow-hidden">
       <div className="flex items-center justify-between px-2 mb-1">
         <span className="text-[11px] font-medium tracking-wider uppercase text-zinc-400">
-          Canlı Frekans Tepki Eğrisi
+          {t.liveCurveTitle}
         </span>
         <div className="flex items-center gap-3 text-[11px] text-zinc-400">
           <span>
-            Preamp:{" "}
+            {t.preampLabel}:{" "}
             <strong
               className={
                 bypassed ? "text-zinc-500" : "text-violet-300 font-semibold"
@@ -97,7 +100,7 @@ export const FrequencyCurve: React.FC<FrequencyCurveProps> = ({
                 bypassed ? "bg-zinc-500" : "bg-violet-400 animate-pulse"
               }`}
             />
-            {bypassed ? "Bypass" : "Aktif"}
+            {bypassed ? t.statusBypass : t.statusActive}
           </span>
         </div>
       </div>

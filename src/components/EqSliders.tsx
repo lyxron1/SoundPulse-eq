@@ -2,11 +2,13 @@ import React, { useCallback, useRef } from "react";
 import { RotateCcw, Save } from "lucide-react";
 import { BandGain } from "../types/eq";
 import { formatFreqLabel } from "../data/presets";
+import { Translations } from "../i18n/translations";
 
 interface EqSlidersProps {
   bands: BandGain[];
   preamp: number;
   bypassed: boolean;
+  t: Translations;
   onBandChange: (freq: number, gain: number) => void;
   onPreampChange: (preamp: number) => void;
   onResetFlat: () => void;
@@ -25,6 +27,7 @@ interface VerticalFaderProps {
   freq: number;
   gain: number;
   bypassed: boolean;
+  doubleClickTitle: string;
   onChange: (gain: number) => void;
 }
 
@@ -32,6 +35,7 @@ const VerticalFader: React.FC<VerticalFaderProps> = ({
   freq,
   gain,
   bypassed,
+  doubleClickTitle,
   onChange,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -104,7 +108,7 @@ const VerticalFader: React.FC<VerticalFaderProps> = ({
         onPointerMove={handlePointerMove}
         onDoubleClick={() => !bypassed && onChange(0)}
         onKeyDown={handleKeyDown}
-        title="Çift tıkla: 0 dB sıfırla"
+        title={doubleClickTitle}
         className={`relative w-8 h-36 flex items-center justify-center touch-none outline-none rounded-xl ${
           bypassed ? "cursor-not-allowed opacity-45" : "cursor-ns-resize"
         }`}
@@ -153,6 +157,7 @@ export const EqSliders: React.FC<EqSlidersProps> = ({
   bands,
   preamp,
   bypassed,
+  t,
   onBandChange,
   onPreampChange,
   onResetFlat,
@@ -163,7 +168,7 @@ export const EqSliders: React.FC<EqSlidersProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-1 min-w-[240px]">
           <span className="text-xs font-medium text-zinc-300 whitespace-nowrap">
-            Preamp
+            {t.preampLabel}
           </span>
           <input
             type="range"
@@ -190,7 +195,7 @@ export const EqSliders: React.FC<EqSlidersProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.06] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Sıfırla
+            {t.resetBtn}
           </button>
           <button
             type="button"
@@ -198,7 +203,7 @@ export const EqSliders: React.FC<EqSlidersProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-violet-600/20 hover:bg-violet-600/30 text-violet-200 border border-violet-500/30 transition cursor-pointer"
           >
             <Save className="w-3.5 h-3.5" />
-            Özel Profil Kaydet
+            {t.saveCustomBtn}
           </button>
         </div>
       </div>
@@ -210,6 +215,7 @@ export const EqSliders: React.FC<EqSlidersProps> = ({
             freq={band.freq}
             gain={band.gain}
             bypassed={bypassed}
+            doubleClickTitle={t.doubleClickResetTitle}
             onChange={(g) => onBandChange(band.freq, g)}
           />
         ))}

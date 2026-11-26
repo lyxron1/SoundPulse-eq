@@ -9,11 +9,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { EqProfile } from "../types/eq";
+import { Translations } from "../i18n/translations";
 
 interface PresetGridProps {
   presets: EqProfile[];
   activeProfileId: string;
   bypassed: boolean;
+  t: Translations;
   onSelectPreset: (preset: EqProfile) => void;
   onDeleteCustomPreset: (id: string) => void;
 }
@@ -39,6 +41,7 @@ export const PresetGrid: React.FC<PresetGridProps> = ({
   presets,
   activeProfileId,
   bypassed,
+  t,
   onSelectPreset,
   onDeleteCustomPreset,
 }) => {
@@ -46,16 +49,19 @@ export const PresetGrid: React.FC<PresetGridProps> = ({
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between px-0.5">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          Hazır & Özel Ses Profilleri
+          {t.presetsHeading}
         </h2>
         <span className="text-[11px] text-zinc-500">
-          Tek tıkla anlık geçiş
+          {t.presetsHint}
         </span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
         {presets.map((preset) => {
           const isActive = !bypassed && activeProfileId === preset.id;
+          const localized = !preset.isCustom ? t.presets[preset.id] : undefined;
+          const displayName = localized?.name ?? preset.name;
+          const displayDesc = localized?.description ?? preset.description;
           return (
             <div
               key={preset.id}
@@ -89,7 +95,7 @@ export const PresetGrid: React.FC<PresetGridProps> = ({
                   {preset.isCustom && (
                     <button
                       type="button"
-                      title="Özel profili sil"
+                      title={t.deleteCustomPresetTitle}
                       onClick={(e) => {
                         e.stopPropagation();
                         onDeleteCustomPreset(preset.id);
@@ -112,10 +118,10 @@ export const PresetGrid: React.FC<PresetGridProps> = ({
               </div>
 
               <div className="font-medium text-sm text-zinc-100 leading-snug truncate">
-                {preset.name}
+                {displayName}
               </div>
               <div className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">
-                {preset.description}
+                {displayDesc}
               </div>
             </div>
           );
